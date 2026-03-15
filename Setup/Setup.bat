@@ -1,4 +1,12 @@
 @echo off
+:: Check if running as admin
+net session >nul 2>&1
+if %errorlevel% neq 0 (
+    echo Requesting administrative privileges...
+    powershell -Command "Start-Process '%~f0' -Verb RunAs"
+    exit /b
+)
+
 setlocal
 
 echo Copying required Visual C++ DLLs from plugins folder...
@@ -8,14 +16,6 @@ set DLLS=VCRUNTIME140.dll MSVCP140.dll VCRUNTIME140_1.dll
 
 REM Target system folder
 set SYSTEM32=%SystemRoot%\System32
-
-REM Check if running as admin
->nul 2>&1 net session
-if %errorlevel% neq 0 (
-    echo This script must be run as Administrator!
-    pause
-    exit /b
-)
 
 REM Loop through each DLL in plugins folder
 for %%D in (%DLLS%) do (
@@ -35,7 +35,6 @@ REM Ask user for the serial number on the next line
 REM -------------------------------
 echo Please enter your serial number:
 set /p SERIAL=
-
 
 REM Delete Serialnumber.bin if it exists
 REM -------------------------------
