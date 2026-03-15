@@ -36,8 +36,17 @@ REM -------------------------------
 echo Please enter your serial number:
 set /p SERIAL=
 
+
+REM Delete Serialnumber.bin if it exists
 REM -------------------------------
-REM Create a .bin file containing the serial number
+if exist "%~dp0Serialnumber.bin" (
+    echo Updating existing Serialnumber.bin...
+    attrib -h -r "%~dp0Serialnumber.bin" 2>nul
+    del /f /q "%~dp0Serialnumber.bin"
+)
+
+REM -------------------------------
+REM Create a new .bin file containing the serial number
 REM -------------------------------
 echo %SERIAL% > "%~dp0Serialnumber.bin"
 
