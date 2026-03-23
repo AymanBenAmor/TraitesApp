@@ -1,130 +1,180 @@
 import 'package:flutter/material.dart';
-import 'dart:io';
-import 'dart:convert';
-import 'package:crypto/crypto.dart'; // add crypto: ^3.0.2 in pubspec.yaml
-
-Future<String> getMacAddress() async {
-  try {
-    if (Platform.isWindows) {
-      ProcessResult result = await Process.run('getmac', []);
-      if (result.exitCode == 0) {
-        String output = result.stdout.toString();
-        RegExp reg = RegExp(r'([0-9A-Fa-f]{2}-){5}[0-9A-Fa-f]{2}');
-        Match? match = reg.firstMatch(output);
-        if (match != null) {
-          return match.group(0)!.toUpperCase(); // keep F0-9E-4A-CF-26-BE
-        }
-      }
-    }
-  } catch (e) {
-    print("Error getting MAC: $e");
-  }
-  return "";
-}
-
-String normalizeMac(String mac) {
-  // Remove all '-' and ':' and convert to uppercase
-  return mac.replaceAll('-', '').replaceAll(':', '').toUpperCase();
-}
-
-String hashMac(String mac, String secretKey) {
-  mac = normalizeMac(mac);
-  var bytes = utf8.encode(mac + secretKey);
-  var digest = sha512.convert(bytes);
-  return digest.toString();
-}
+import 'package:traite_manager/Clients.dart';
+import 'package:traite_manager/utils/SecurityTools.dart';
+import 'package:traite_manager/utils/tools.dart';
+import 'package:traite_manager/utils/clock_utilities.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
-
   @override
   State<HomePage> createState() => _HomePageState();
 }
 
 class _HomePageState extends State<HomePage> {
-  bool authorized = false;
-  final String binFilePath = r".\Setup\SerialNumber.bin"; // change to your file path
-  final String secretKey = "kjqshkdjshkdjhkuqhfkqdjhfkdhfkqdufhkdqjf"; // same key used to generate the hash
+  String _currentTime = "";
+  ClockHelper? _clockHelper;
+  final int _notifsNumber = 0; // example notification count
 
   @override
   void initState() {
     super.initState();
-    checkLicense();
+    checkLicense(context: context); // vérification de licence
+    _clockHelper = ClockHelper(onTick: (time) {
+      setState(() {
+        _currentTime = time;
+      });
+    });
+    _clockHelper!.startClock();
   }
 
-  Future<void> checkLicense() async {
-    try {
-      // 1️⃣ Get MAC
-      String mac = await getMacAddress();
-      if (mac.isEmpty) {
-        showBlocked("Unable to get MAC address.");
-        return;
-      }
-
-      // 2️⃣ Hash MAC with secret key
-      String macHash = hashMac(mac, secretKey);
-      
-
-      // 3️⃣ Read serial hash from bin file
-      if (!File(binFilePath).existsSync()) {
-        showBlocked("License file not found!");
-        return;
-      }
-
-      String serialHash = await File(binFilePath).readAsString();
-      serialHash = serialHash.trim(); // remove extra whitespace
-      print("MAC: $mac"); // for debugging, remove in production
-      print("MAC Hash: $macHash"); // for debugging, remove in production
-      print("Serial Hash: $serialHash"); // for debugging, remove in production
-
-      // 4️⃣ Compare
-      if (macHash == serialHash) {
-        setState(() {
-          authorized = true;
-        });
-      } else {
-        showBlocked("You do not have a valid license to use this application.\n Please contact administrator to obtain a valid license.\n\n Admin E-mail: aymen.benamor@ensi-uma.tn\n Admin Phone: +216 54 393 769");
-      }
-    } catch (e) {
-      showBlocked("Error: $e");
-    }
-  }
-
-  void showBlocked(String message) {
-    showDialog(
-      context: context,
-      barrierDismissible: false, // cannot dismiss
-      builder: (context) => AlertDialog(
-        title: const Text("License Error"),
-        content: Text(message),
-        actions: [
-          TextButton(
-            onPressed: () {
-              exit(0); // close the app
-            },
-            child: const Text("Exit"),
-          ),
-        ],
-      ),
-    );
+  @override
+  void dispose() {
+    _clockHelper?.stopClock();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    if (!authorized) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
-    }
-
     return Scaffold(
-      appBar: AppBar(title: const Text("Home Page")),
-      body: Center(
-        child: ElevatedButton(
-          onPressed: () {
-            print("App is authorized!");
-          },
-          child: const Text("Click Me"),
+      backgroundColor: const Color(0xFFF5F7FA),
+
+      appBar: AppBar(
+        backgroundColor: Colors.blueGrey[900],
+        elevation: 4,
+        title: const Text(
+          "Gestion des Traites Bancaires",
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: Color.fromARGB(255, 237, 237, 237),
+          ),
+        ),
+        actions: [
+
+          // 🔄 Sync button
+          IconButton(
+            icon: const Icon(
+              Icons.sync,
+              color: Color.fromARGB(255, 237, 237, 237),
+            ),
+            onPressed: () {
+              print("Sync clicked");
+              // TODO: add sync logic (API / database refresh)
+            },
+          ),
+          Stack(
+            children: [
+              IconButton(
+                icon: const Icon(
+                  Icons.notifications,
+                  color: Colors.white,
+                ),
+                onPressed: () {
+                  print("Notifications clicked");
+                },
+              ),
+
+              // Only show badge if _notifsNumber > 0
+              if (_notifsNumber > 0)
+                Positioned(
+                  right: 6,
+                  top: 6,
+                  child: Container(
+                    padding: const EdgeInsets.all(0.8),
+                    decoration: BoxDecoration(
+                      color: Colors.red,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    constraints: const BoxConstraints(
+                      minWidth: 14,
+                      minHeight: 14,
+                    ),
+                    child: Text(
+                      "$_notifsNumber", // number of notifications
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 9,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          SizedBox(width: 10), // spacing
+
+          // ⏱ Time display
+          Padding(
+            padding: const EdgeInsets.only(right: 16),
+            child: Center(
+              child: Text(
+                _currentTime.toString().substring(0, 11),
+                style: const TextStyle(
+                  fontSize: 16,
+                  color: Color.fromARGB(255, 237, 237, 237),
+                ),
+              ),
+            ),
+          )
+        ],
+      ),
+
+      body: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+
+            // 👋 Section bienvenue
+            const Text(
+              "Bienvenue",
+              style: TextStyle(
+                fontSize: 26,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+
+            const SizedBox(height: 10),
+
+            const Text(
+              "Gérez vos traites bancaires efficacement",
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey,
+              ),
+            ),
+
+            const SizedBox(height: 60),
+
+            // 📦 Section Cartes
+            Expanded(
+              
+              child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 80), // padding X-axis
+              child: GridView.count(
+                crossAxisCount: 3,            // 3 cartes par ligne
+                crossAxisSpacing: 100,         // espacement horizontal entre cartes
+                mainAxisSpacing: 100,          // espacement vertical entre cartes
+                childAspectRatio: 1,       // ratio largeur/hauteur pour cartes plus petites
+                children: [
+
+                  buildCard(Icons.add, "Créer une Traite", () {
+                    print("Créer une Traite tapped");
+                  }, color: const Color.fromARGB(184, 1, 64, 96)), // bleu-gris clair
+
+                  buildCard(Icons.list, "Voir les Traites", () {
+                    print("Voir les Traites tapped");
+                  }, color: const Color.fromARGB(184, 1, 64, 96)), // bleu-gris moyen
+
+                  buildCard(Icons.person_add, "Ajouter un Client", () {
+                    Navigator.push(context, MaterialPageRoute(builder: (context) => EspaceClientPage()));
+                  }, color: const Color.fromARGB(184, 1, 64, 96)), // bleu-gris foncé
+
+                ],
+              ),
+            )
+            ),
+          ],
         ),
       ),
     );
