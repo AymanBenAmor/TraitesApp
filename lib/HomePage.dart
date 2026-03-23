@@ -166,7 +166,7 @@ class _HomePageState extends State<HomePage> {
                     print("Voir les Traites tapped");
                   }, color: const Color.fromARGB(184, 1, 64, 96)), // bleu-gris moyen
 
-                  buildCard(Icons.person_add, "Ajouter un Client", () {
+                  buildCard(Icons.person, "Espace Client", () {
                     Navigator.push(context, MaterialPageRoute(builder: (context) => EspaceClientPage()));
                   }, color: const Color.fromARGB(184, 1, 64, 96)), // bleu-gris foncé
 
