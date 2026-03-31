@@ -457,3 +457,41 @@ Future<List<Client>> loadClientsFromCSV() async {
     return [];
   }
 }
+
+
+Future<List<Client>> checkClientsMontant() async {
+  final List<Client> clientsExceeding = [];
+
+  try {
+    final Directory docDir = await getApplicationDocumentsDirectory();
+    final File file = File('${docDir.path}/TraiteManager/Clients/clients.csv');
+
+    if (!await file.exists()) return clientsExceeding;
+
+    final List<String> lines = await file.readAsLines();
+    if (lines.length <= 1) return clientsExceeding; // only header
+
+    for (var line in lines.sublist(1)) {
+      final parts = line.split(',');
+      if (parts.length < 4) continue;
+
+      final String name = parts[0].trim();
+      final int phone = int.tryParse(parts[1].trim()) ?? 0; // parse as integer
+      final String rib = parts[2].trim();
+      final double montant = double.tryParse(parts[3].trim()) ?? 0;
+
+      if (montant > 10000) {
+        clientsExceeding.add(Client(
+          name: name,
+          phone: phone,
+          rib: rib,
+          montantEncours: montant,
+        ));
+      }
+    }
+  } catch (e) {
+    print("Error checking clients: $e");
+  }
+
+  return clientsExceeding;
+}
