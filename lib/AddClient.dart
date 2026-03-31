@@ -14,7 +14,6 @@ class _AddClientPageState extends State<AddClientPage> {
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _ribController = TextEditingController();
 
-  bool _clientAdded = false; // To show success message after adding client
 
   // List of clients in memory
   List<Map<String, String>> clients = [];
@@ -22,30 +21,19 @@ class _AddClientPageState extends State<AddClientPage> {
   final _formKey = GlobalKey<FormState>();
 
   /// Add client to list and save in CSV
-  Future<void> addClient() async {
-    final newClient = {
-      "name": _nameController.text,
-      "phone": _phoneController.text,
-      "rib": _ribController.text,
-    };
+Future<void> addClient() async {
+  final newClient = {
+    "name": _nameController.text.toLowerCase(),
+    "phone": _phoneController.text,
+    "rib": _ribController.text,
+  };
 
-    // Save to CSV and check if added successfully
-    bool clientAdded = await saveClientToCSV(context, newClient);
+  bool clientAdded = await saveClientToCSV(context, newClient);
 
-    if (clientAdded) {
-      setState(() {
-        clients.add(newClient);
-        _clientAdded = true;
-      });
-
-      // Clear fields
-      _nameController.clear();
-      _phoneController.clear();
-      _ribController.clear();
-    } else {
-      setState(() => _clientAdded = false);
-    }
+  if (clientAdded) {
+    Navigator.pop(context, true); // 🔥 THIS LINE FIXES EVERYTHING
   }
+}
 
   @override
   Widget build(BuildContext context) {
@@ -109,25 +97,6 @@ class _AddClientPageState extends State<AddClientPage> {
             ),
             const SizedBox(height: 20),
 
-            // Show ListView only if a client has been successfully added
-            _clientAdded
-                ? Expanded(
-                    child: ListView.builder(
-                      itemCount: clients.length,
-                      itemBuilder: (context, index) {
-                        final client = clients[index];
-                        return Card(
-                          child: ListTile(
-                            title: Text(client["name"] ?? ""),
-                            subtitle: Text(
-                              "Tel: ${client["phone"]} | RIB: ${client["rib"]}",
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  )
-                : const SizedBox(), // empty if no client added yet
           ],
         ),
       ),

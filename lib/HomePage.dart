@@ -1,5 +1,10 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:traite_manager/Clients.dart';
+import 'package:traite_manager/NotificationPage.dart';
+import 'package:traite_manager/main.dart';
 import 'package:traite_manager/utils/SecurityTools.dart';
 import 'package:traite_manager/utils/tools.dart';
 import 'package:traite_manager/utils/clock_utilities.dart';
@@ -10,10 +15,11 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> {
+class _HomePageState extends State<HomePage> with RouteAware {
   String _currentTime = "";
   ClockHelper? _clockHelper;
-  final int _notifsNumber = 0; // example notification count
+  int _notifsNumber = 0; // example notification count
+  List<Client> clientsExceedingMontant = [];
 
   @override
   void initState() {
@@ -25,13 +31,37 @@ class _HomePageState extends State<HomePage> {
       });
     });
     _clockHelper!.startClock();
+    _loadClients();
+    
+  }
+
+    Future<void> _loadClients() async {
+    final clients = await checkClientsMontant();
+    setState(() {
+      clientsExceedingMontant = clients;
+      _notifsNumber = clients.length; // update notification count
+    });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    routeObserver.subscribe(this, ModalRoute.of(context)!);
   }
 
   @override
   void dispose() {
+    routeObserver.unsubscribe(this);
     _clockHelper?.stopClock();
     super.dispose();
   }
+
+  // Called when coming back to this page
+  @override
+  void didPopNext() {
+    _loadClients(); // refresh client notifications
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -68,9 +98,17 @@ class _HomePageState extends State<HomePage> {
                   Icons.notifications,
                   color: Colors.white,
                 ),
-                onPressed: () {
-                  print("Notifications clicked");
-                },
+      onPressed: () {
+        // Navigate to NotificationsPage
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => NotificationsPage(
+              clientsExceeding: clientsExceedingMontant,
+            ),
+          ),
+        );
+      },
               ),
 
               // Only show badge if _notifsNumber > 0
@@ -179,4 +217,41 @@ class _HomePageState extends State<HomePage> {
       ),
     );
   }
+}
+
+Future<List<Client>> checkClientsMontant() async {
+  final List<Client> clientsExceeding = [];
+
+  try {
+    final Directory docDir = await getApplicationDocumentsDirectory();
+    final File file = File('${docDir.path}/TraiteManager/Clients/clients.csv');
+
+    if (!await file.exists()) return clientsExceeding;
+
+    final List<String> lines = await file.readAsLines();
+    if (lines.length <= 1) return clientsExceeding; // only header
+
+    for (var line in lines.sublist(1)) {
+      final parts = line.split(',');
+      if (parts.length < 4) continue;
+
+      final String name = parts[0].trim();
+      final int phone = int.tryParse(parts[1].trim()) ?? 0; // parse as integer
+      final String rib = parts[2].trim();
+      final double montant = double.tryParse(parts[3].trim()) ?? 0;
+
+      if (montant > 10000) {
+        clientsExceeding.add(Client(
+          name: name,
+          phone: phone,
+          rib: rib,
+          montantEncours: montant,
+        ));
+      }
+    }
+  } catch (e) {
+    print("Error checking clients: $e");
+  }
+
+  return clientsExceeding;
 }

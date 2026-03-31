@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'HomePage.dart';
 
+final RouteObserver<ModalRoute<void>> routeObserver = RouteObserver<ModalRoute<void>>();
 
 void main() {
   runApp(const MyApp());
@@ -19,6 +20,7 @@ class MyApp extends StatelessWidget {
       ),
       debugShowCheckedModeBanner: false, // ✅ HERE (correct place)
       home: HomePage(),
+      navigatorObservers: [routeObserver], // add the observer here
     );
   }
 }

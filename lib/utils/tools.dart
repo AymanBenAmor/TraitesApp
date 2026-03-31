@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
+import 'package:traite_manager/ModifyClientPage.dart';
 
 /// 🚨 Show license error dialog
 void showBlocked(BuildContext context, String message) {
@@ -207,8 +208,8 @@ Widget buildInputField(
                   }
                   break;
                 case FieldType.rib:
-                  if (!RegExp(r'^[0-9]{20}$').hasMatch(value)) {
-                    return "Le RIB doit contenir exactement 20 chiffres";
+                  if (!RegExp(r'^[0-9]{4}$').hasMatch(value)) {
+                    return "Le RIB doit contenir exactement 4 chiffres";
                   }
                   break;
                 default:
@@ -241,10 +242,11 @@ class Client {
   });
 }
 
-/// Reusable ListView for clients
 class ClientListView extends StatelessWidget {
   final List<Client> clients;
-  const ClientListView({super.key, required this.clients});
+  final VoidCallback onRefresh; // callback to refresh parent
+
+  const ClientListView({super.key, required this.clients, required this.onRefresh});
 
   @override
   Widget build(BuildContext context) {
@@ -252,19 +254,22 @@ class ClientListView extends StatelessWidget {
       itemCount: clients.length,
       itemBuilder: (context, index) {
         return Padding(
-          padding:
-              const EdgeInsets.symmetric(horizontal: 300.0, vertical: 4.0),
-          child: ClientCard(client: clients[index]),
+          padding: const EdgeInsets.symmetric(horizontal: 300.0, vertical: 4.0),
+          child: ClientCard(
+            client: clients[index],
+            onDeleted: onRefresh, // pass refresh callback
+          ),
         );
       },
     );
   }
 }
 
-/// Reusable Card widget for a single client
 class ClientCard extends StatelessWidget {
   final Client client;
-  const ClientCard({super.key, required this.client});
+  final VoidCallback onDeleted; // <-- callback to refresh parent
+
+  const ClientCard({super.key, required this.client, required this.onDeleted});
 
   @override
   Widget build(BuildContext context) {
@@ -279,11 +284,9 @@ class ClientCard extends StatelessWidget {
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text("Téléphone: ${client.phone}",
-                style: const TextStyle(fontSize: 15)),
+            Text("Téléphone: ${client.phone}", style: const TextStyle(fontSize: 15)),
             Text("RIB: ${client.rib}", style: const TextStyle(fontSize: 15)),
-            Text("Montant encours: ${client.montantEncours}",
-                style: const TextStyle(fontSize: 15)),
+            Text("Montant encours: ${client.montantEncours}", style: const TextStyle(fontSize: 15)),
           ],
         ),
         trailing: FittedBox(
@@ -291,16 +294,29 @@ class ClientCard extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              IconButton(
-                icon: const Icon(Icons.edit, color: Colors.blue),
-                onPressed: () => print("Modifier client: ${client.name}"),
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-              ),
+            IconButton(
+              icon: const Icon(Icons.edit, color: Colors.blue),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => ModifyClientPage(
+                      client: client,
+                      onModified: onDeleted, // reuse refresh callback
+                    ),
+                  ),
+                );
+              },
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+            ),
               const SizedBox(height: 8),
               IconButton(
                 icon: const Icon(Icons.delete, color: Colors.red),
-                onPressed: () => print("Supprimer client: ${client.name}"),
+                onPressed: () async {
+                  await deleteClientFromCSV(client.rib);
+                  onDeleted(); // <-- notify parent to reload
+                },
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
               ),
@@ -312,43 +328,64 @@ class ClientCard extends StatelessWidget {
   }
 }
 
+/// Remove a client row from CSV based on RIB
+Future<void> deleteClientFromCSV(String rib) async {
+  try {
+    final Directory docDir = await getApplicationDocumentsDirectory();
+    final File file = File('${docDir.path}/TraiteManager/Clients/clients.csv');
 
+    if (!await file.exists()) return;
+
+    final List<String> lines = await file.readAsLines();
+    if (lines.isEmpty) return;
+
+    // Keep header
+    final header = lines.first;
+    final remaining = lines.skip(1).where((line) {
+      final parts = line.split(',');
+      return parts[2] != rib; // parts[2] is RIB
+    }).toList();
+
+    // Write back header + remaining
+    final content = [header, ...remaining].join('\n');
+    await file.writeAsString(content, flush: true);
+  } catch (e) {
+    print("Error deleting client from CSV: $e");
+  }
+}
 
 /// Save client to CSV in Documents/TraiteManager/Clients/clients.csv
 Future<bool> saveClientToCSV(
     BuildContext context, Map<String, String> client) async {
   try {
-    // Get Documents folder
     final Directory docDir = await getApplicationDocumentsDirectory();
     final Directory pathDir = Directory('${docDir.path}/TraiteManager/Clients');
 
-    // Create folder if not exists
     if (!await pathDir.exists()) {
       await pathDir.create(recursive: true);
     }
 
     final File file = File('${pathDir.path}/clients.csv');
 
-    // If file doesn't exist, create and add header
-    if (!await file.exists()) {
+    // If file doesn't exist or is empty, create with header
+    if (!await file.exists() || await file.length() == 0) {
       await file.writeAsString("Name,Phone,RIB,Montant\n",
           mode: FileMode.write, flush: true);
     }
 
-    // Read existing rows
+    // Read existing lines, skip header
     final List<String> lines = await file.readAsLines();
+    final List<String> dataLines = lines.length > 1 ? lines.sublist(1) : [];
 
-    // Check if the client already exists (by name or RIB)
-    bool exists = lines.any((line) {
-      if (line.startsWith("Name")) return false; // skip header
+    // Check if client exists
+    bool exists = dataLines.any((line) {
       final parts = line.split(',');
       final name = parts[0].trim();
       final rib = parts[2].trim();
-      return name == client['name'] || rib == client['rib'];
+      return name.toLowerCase() == client['name']?.toLowerCase() || rib == client['rib'];
     });
 
     if (exists) {
-      // Show SnackBar if client exists
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text("Client already exists!"),
@@ -359,11 +396,17 @@ Future<bool> saveClientToCSV(
       return false;
     }
 
-    // Append new client row
-    final row = "${client['name']},${client['phone']},${client['rib']},0\n";
+    // Ensure new row starts on a new line
+    String row;
+    final String fileContent = await file.readAsString();
+    if (fileContent.endsWith('\n')) {
+      row = "${client['name']},${client['phone']},${client['rib']},0\n";
+    } else {
+      row = "\n${client['name']},${client['phone']},${client['rib']},0\n";
+    }
+
     await file.writeAsString(row, mode: FileMode.append, flush: true);
 
-    // Show SnackBar for success
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text("Client saved successfully!"),
@@ -373,7 +416,6 @@ Future<bool> saveClientToCSV(
     );
     return true;
   } catch (e) {
-    // Show SnackBar for error
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text("Error saving client: $e"),
@@ -382,5 +424,36 @@ Future<bool> saveClientToCSV(
       ),
     );
     return false;
+  }
+}
+
+Future<List<Client>> loadClientsFromCSV() async {
+  try {
+    final Directory docDir = await getApplicationDocumentsDirectory();
+    final File file =
+        File('${docDir.path}/TraiteManager/Clients/clients.csv');
+
+    if (!await file.exists()) {
+      return [];
+    }
+
+    final List<String> lines = await file.readAsLines();
+
+    // Skip header
+    final clients = lines.skip(1).map((line) {
+      final parts = line.split(',');
+
+      return Client(
+        name: parts[0],
+        phone: int.tryParse(parts[1]) ?? 0,
+        rib: parts[2],
+        montantEncours: double.tryParse(parts[3]) ?? 0,
+      );
+    }).toList();
+
+    return clients;
+  } catch (e) {
+    print("Error reading CSV: $e");
+    return [];
   }
 }
