@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:traite_manager/AddTraitePage.dart';
 import 'package:traite_manager/Clients.dart';
 import 'package:traite_manager/NotificationPage.dart';
 import 'package:traite_manager/main.dart';
@@ -198,6 +199,7 @@ class _HomePageState extends State<HomePage> with RouteAware {
 
                   buildCard(Icons.add, "Créer une Traite", () {
                     print("Créer une Traite tapped");
+                    Navigator.push(context, MaterialPageRoute(builder: (context) => NouvelleTraitePage()));
                   }, color: const Color.fromARGB(184, 1, 64, 96)), // bleu-gris clair
 
                   buildCard(Icons.list, "Voir les Traites", () {

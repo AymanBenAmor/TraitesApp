@@ -6,7 +6,7 @@ class NotificationsPage extends StatelessWidget {
 
   const NotificationsPage({super.key, required this.clientsExceeding});
 
-  @override
+  @override 
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(

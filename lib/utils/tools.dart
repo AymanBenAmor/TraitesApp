@@ -3,6 +3,8 @@ import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import 'package:traite_manager/ModifyClientPage.dart';
 
+int montantLimit = 15000; // montant limite pour les notifications
+
 /// 🚨 Show license error dialog
 void showBlocked(BuildContext context, String message) {
   showDialog(
@@ -480,7 +482,7 @@ Future<List<Client>> checkClientsMontant() async {
       final String rib = parts[2].trim();
       final double montant = double.tryParse(parts[3].trim()) ?? 0;
 
-      if (montant > 10000) {
+      if (montant > montantLimit) {
         clientsExceeding.add(Client(
           name: name,
           phone: phone,
