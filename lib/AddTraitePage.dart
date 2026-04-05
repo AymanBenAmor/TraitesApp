@@ -208,6 +208,7 @@ Future<void> sauvegarder() async {
 
         final nameIndex = headers.indexOf('Name');
         final montantIndex = headers.indexOf('Montant');
+        
 
         if (nameIndex == -1 || montantIndex == -1) {
           debugPrint("Clients CSV headers invalid: $headers");
@@ -217,11 +218,15 @@ Future<void> sauvegarder() async {
         } else {
           // ✅ Check if client exists in clients.csv
           bool clientFound = false;
+          
           for (var i = 0; i < data.length; i++) {
             if (data[i][nameIndex].toString().trim() == clientController.text.trim()) {
               double oldMontant = double.tryParse(data[i][montantIndex].toString()) ?? 0;
               double montantToAdd = double.tryParse(montantController.text) ?? 0;
-              data[i][montantIndex] = (oldMontant + montantToAdd).toStringAsFixed(2);
+              print(etat);
+              if(etat != "Payé"){
+                data[i][montantIndex] = (oldMontant + montantToAdd).toString();
+              }
               clientFound = true;
               break;
             }
