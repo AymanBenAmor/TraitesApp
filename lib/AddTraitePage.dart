@@ -223,7 +223,7 @@ Future<void> sauvegarder() async {
             if (data[i][nameIndex].toString().trim() == clientController.text.trim()) {
               double oldMontant = double.tryParse(data[i][montantIndex].toString()) ?? 0;
               double montantToAdd = double.tryParse(montantController.text) ?? 0;
-              print(etat);
+              
               if(etat != "Payé"){
                 data[i][montantIndex] = (oldMontant + montantToAdd).toString();
               }
