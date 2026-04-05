@@ -4,6 +4,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:traite_manager/ModifyClientPage.dart';
 
 int montantLimit = 15000; // montant limite pour les notifications
+int RIBLength = 4; // longueur du RIB
 
 /// 🚨 Show license error dialog
 void showBlocked(BuildContext context, String message) {
@@ -210,8 +211,8 @@ Widget buildInputField(
                   }
                   break;
                 case FieldType.rib:
-                  if (!RegExp(r'^[0-9]{4}$').hasMatch(value)) {
-                    return "Le RIB doit contenir exactement 4 chiffres";
+                  if (!RegExp('^[0-9]{$RIBLength}\$').hasMatch(value)) {
+                    return "Le RIB doit contenir exactement $RIBLength chiffres";
                   }
                   break;
                 default:

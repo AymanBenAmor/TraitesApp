@@ -29,6 +29,8 @@ class _NouvelleTraitePageState extends State<NouvelleTraitePage> {
   String etat = "";
   bool retour = false;
 
+  bool isSaving = false;
+
   List<Map<String, String>> clients = [];
 
   @override
@@ -43,7 +45,6 @@ class _NouvelleTraitePageState extends State<NouvelleTraitePage> {
 
     final Directory docDir = await getApplicationDocumentsDirectory();
     final File file = File('${docDir.path}/TraiteManager/Clients/clients.csv');
-    print("Looking for CSV at: ${file.path}");
 
     if (await file.exists()) {
       
@@ -82,12 +83,82 @@ class _NouvelleTraitePageState extends State<NouvelleTraitePage> {
     }
   }
 
+Future<bool> traiteExiste(String numero) async {
+  final Directory docDir = await getApplicationDocumentsDirectory();
+  final File csvFile = File('${docDir.path}/TraiteManager/Traites/Traites.csv');
 
-void sauvegarder() async {
+  if (!await csvFile.exists()) return false;
+
+  final content = await csvFile.readAsString();
+  final lines = content.split('\n');
+
+  if (lines.length <= 1) return false; // no data
+
+  final headers = lines.first.split(',');
+  final numeroIndex = headers.indexOf("numero");
+
+  if (numeroIndex == -1) return false;
+
+  for (int i = 1; i < lines.length; i++) {
+    if (lines[i].trim().isEmpty) continue;
+
+    final cols = lines[i].split(',');
+
+    if (cols.length > numeroIndex && cols[numeroIndex] == numero) {
+      return true; // traite exists
+    }
+  }
+
+  return false;
+}
+
+Future<void> sauvegarder() async {
   if (_formKey.currentState!.validate() && etat.isNotEmpty && dateEcheance != null) {
+
+    // ✅ Client cannot be empty
+    if (clientController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Ce client n'existe pas. Veuillez le sélectionner dans la liste.")),
+      );
+      setState(() {
+      isSaving = false; // Start loading
+    });
+      return;
+    }
+
+    setState(() {
+      isSaving = true; // Start loading
+    });
+
+    // ✅ Check if dateEcheance is after dateReception
+    if (dateEcheance!.isBefore(dateReception) || dateEcheance!.isAtSameMomentAs(dateReception)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("La date d'échéance doit être après la date de réception.")),
+      );
+      setState(() => isSaving = false);
+      return;
+    }
+
+    // ✅ Check numeric fields
+    if (int.tryParse(numeroController.text) == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Le numéro de traite doit être un nombre.")),
+      );
+      setState(() => isSaving = false);
+      return;
+    }
+
+    if (double.tryParse(montantController.text) == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Le montant doit être un nombre.")),
+      );
+      setState(() => isSaving = false);
+      return;
+    }
+
     final traite = {
       "numero": numeroController.text,
-      "client": clientController.text,
+      "client": clientController.text.trim(),
       "rib": ribController.text,
       "source": sourceController.text,
       "date_echeance": "${dateEcheance!.day}/${dateEcheance!.month}/${dateEcheance!.year}",
@@ -103,22 +174,17 @@ void sauvegarder() async {
       final Directory docDir = await getApplicationDocumentsDirectory();
       final Directory traiteDir = Directory('${docDir.path}/TraiteManager/Traites');
 
-      if (!await traiteDir.exists()) {
-        await traiteDir.create(recursive: true);
-      }
+      if (!await traiteDir.exists()) await traiteDir.create(recursive: true);
 
       final File csvFile = File('${traiteDir.path}/Traites.csv');
 
       // Write headers if file does not exist
       if (!await csvFile.exists()) {
         final headers = traite.keys.toList();
-        await csvFile.writeAsString(
-          headers.join(',') + '\n',
-          flush: true,
-        );
+        await csvFile.writeAsString(headers.join(',') + '\n', flush: true);
       }
 
-      // Append the new row, adding quotes only if necessary
+      // Escape CSV values
       String escapeCsv(String value) {
         if (value.contains(',') || value.contains('\n')) {
           return '"${value.replaceAll('"', '""')}"';
@@ -126,17 +192,71 @@ void sauvegarder() async {
         return value;
       }
 
+      // Append new traite row
       final row = traite.values.map((e) => escapeCsv(e.toString())).join(',');
       await csvFile.writeAsString(row + '\n', mode: FileMode.append, flush: true);
+
+      // --- Update client montant in clients.csv ---
+      final File clientsFile = File('${docDir.path}/TraiteManager/Clients/clients.csv');
+      if (await clientsFile.exists()) {
+        final csvString = await clientsFile.readAsString();
+        final csvTable = CsvToListConverter().convert(csvString, eol: '\n');
+
+        // Trim headers
+        final headers = csvTable[0].map((e) => e.toString().trim()).toList();
+        final data = csvTable.skip(1).toList();
+
+        final nameIndex = headers.indexOf('Name');
+        final montantIndex = headers.indexOf('Montant');
+
+        if (nameIndex == -1 || montantIndex == -1) {
+          debugPrint("Clients CSV headers invalid: $headers");
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Le fichier clients.csv est invalide.")),
+          );
+        } else {
+          // ✅ Check if client exists in clients.csv
+          bool clientFound = false;
+          for (var i = 0; i < data.length; i++) {
+            if (data[i][nameIndex].toString().trim() == clientController.text.trim()) {
+              double oldMontant = double.tryParse(data[i][montantIndex].toString()) ?? 0;
+              double montantToAdd = double.tryParse(montantController.text) ?? 0;
+              data[i][montantIndex] = (oldMontant + montantToAdd).toStringAsFixed(2);
+              clientFound = true;
+              break;
+            }
+          }
+
+          if (!clientFound) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text("Le client sélectionné n'existe pas dans clients.csv.")),
+            );
+            setState(() => isSaving = false);
+            return;
+          }
+
+          // Rewrite clients.csv
+          List<List<String>> stringData =
+              data.map((row) => row.map((e) => e.toString().trim()).toList()).toList();
+          final csvContent = const ListToCsvConverter().convert([headers, ...stringData]);
+          await clientsFile.writeAsString(csvContent, flush: true);
+        }
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Le fichier clients.csv est vide ou n'existe pas.")),
+        );
+        setState(() => isSaving = false);
+        return;
+      }
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Traite sauvegardée !")),
       );
 
-      // Clear the form
+      // Clear form
       numeroController.clear();
       clientController.clear();
-       _autocompleteController?.clear(); // <-- clear Autocomplete field
+      _autocompleteController?.clear();
       ribController.clear();
       sourceController.clear();
       montantController.clear();
@@ -153,6 +273,8 @@ void sauvegarder() async {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Erreur lors de la sauvegarde")),
       );
+    } finally {
+      setState(() => isSaving = false);
     }
   } else {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -178,15 +300,37 @@ void sauvegarder() async {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FB),
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        title: const Text("Nouvelle Traite", style: TextStyle(color: Colors.white)),
-        centerTitle: true,
-        backgroundColor: const Color.fromARGB(184, 1, 64, 96),
-      ),
+appBar: AppBar(
+  leading: IconButton(
+    icon: const Icon(Icons.arrow_back, color: Colors.white),
+    onPressed: () => Navigator.of(context).pop(),
+  ),
+  title: const Text("Nouvelle Traite", style: TextStyle(color: Colors.white)),
+  centerTitle: true,
+  backgroundColor: const Color.fromARGB(184, 1, 64, 96),
+  actions: [
+    IconButton(
+      icon: const Icon(Icons.clear, color: Colors.white),
+      tooltip: "Tout effacer",
+      onPressed: () {
+        // Clear the form
+        numeroController.clear();
+        clientController.clear();
+        _autocompleteController?.clear(); // <-- clear Autocomplete field
+        ribController.clear();
+        sourceController.clear();
+        montantController.clear();
+        destinationController.clear();
+        commentaireController.clear();
+        setState(() {
+          dateEcheance = null;
+          etat = "";
+          retour = false;
+        });
+      },
+    ),
+  ],
+),
       body: Form(
         key: _formKey,
         child: ListView(
@@ -252,7 +396,6 @@ Autocomplete<String>(
                       labelText: "Source client",
                       prefixIcon: Icon(Icons.source, color: Colors.indigo),
                     ),
-                    validator: (v) => v!.isEmpty ? "Champ requis" : null,
                   ),
 
 
@@ -362,21 +505,69 @@ Autocomplete<String>(
             const SizedBox(height: 20),
 
             // Save Button
-            Center(
-              child: ElevatedButton.icon(
-                onPressed: sauvegarder,
-                icon: const Icon(Icons.save, color: Colors.white),
-                label: const Text("Sauvegarder", style: TextStyle(color: Colors.white)),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color.fromARGB(184, 1, 64, 96),
-                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 30),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                ),
-              ),
-            ),
+Center(
+  child: SaveButton(onPressed: sauvegarder),
+),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class SaveButton extends StatefulWidget {
+  final Future<void> Function() onPressed; // Make it async
+  const SaveButton({super.key, required this.onPressed});
+
+  @override
+  State<SaveButton> createState() => _SaveButtonState();
+}
+
+class _SaveButtonState extends State<SaveButton> {
+  bool isHovered = false;
+  bool isLoading = false; // Track loading state
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => isHovered = true),
+      onExit: (_) => setState(() => isHovered = false),
+      child: AnimatedScale(
+        scale: isHovered ? 1.1 : 1.0,
+        duration: const Duration(milliseconds: 150),
+        curve: Curves.easeInOut,
+        child: ElevatedButton.icon(
+          onPressed: isLoading
+              ? null // Disable while loading
+              : () async {
+                  setState(() => isLoading = true);
+                  try {
+                    await widget.onPressed(); // Call the async sauvegarder
+                  } finally {
+                    setState(() => isLoading = false);
+                  }
+                },
+          icon: isLoading
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    color: Colors.white,
+                    strokeWidth: 2,
+                  ),
+                )
+              : const Icon(Icons.save, color: Colors.white),
+          label: Text(
+            isLoading ? "Sauvegarde..." : "Sauvegarder",
+            style: const TextStyle(color: Colors.white),
+          ),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color.fromARGB(184, 1, 64, 96),
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 30),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+            ),
+          ),
         ),
       ),
     );
