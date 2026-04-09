@@ -337,6 +337,43 @@ Widget _buildFilterDate(String label, DateTime? date, Function(DateTime?) onChan
     ),
   );
 }
+
+
+Future<void> _deleteTraite(int index) async {
+  try {
+    final directory = await getApplicationDocumentsDirectory();
+    final path = '${directory.path}/TraiteManager/Traites/traites.csv';
+    final file = File(path);
+
+    // Remove the row from the list
+    _traites.removeAt(index);
+
+    // Rebuild CSV content including header
+    List<List<dynamic>> csvContent = [
+      ['Numero', 'Client', 'RIB', 'Source', 'Date Echéance', 'Date Réception', 'Montant', 'Destination', 'Etat', 'Retour', 'Commentaire'], // header
+      ..._traites
+    ];
+
+    String csv = const ListToCsvConverter().convert(csvContent);
+
+    // Save back to file
+    await file.writeAsString(csv);
+
+    // Update filtered list
+    _applyFilters();
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Traite supprimé avec succès')),
+    );
+  } catch (e) {
+    debugPrint("Error deleting traite: $e");
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Erreur lors de la suppression')),
+    );
+  }
+}
+
+
 @override
 Widget build(BuildContext context) {
   return Scaffold(
@@ -516,87 +553,119 @@ Widget build(BuildContext context) {
                           style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                         ),
                       )
-                    : ListView.builder(
-                        padding: const EdgeInsets.all(12),
-                        itemCount: _filteredTraites.length,
-                        itemBuilder: (context, index) {
-                          final row = _filteredTraites[index];
-                          return Center(
-                            child: Container(
-                              width: MediaQuery.of(context).size.width * 0.66,
-                              child: MouseRegion(
-                                cursor: SystemMouseCursors.click,
-                                child: AnimatedContainer(
-                                  duration: const Duration(milliseconds: 200),
-                                  transform: Matrix4.identity()..scale(1.01),
-                                  child: Card(
-                                shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(16)),
-                                elevation: 6,
-                                margin: const EdgeInsets.symmetric(vertical: 8),
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    gradient: LinearGradient(
-                                      colors: [
-                                        Colors.teal.shade50,
-                                        const Color.fromARGB(255, 225, 232, 238)
-                                      ],
-                                      begin: Alignment.topLeft,
-                                      end: Alignment.bottomRight,
-                                    ),
-                                    borderRadius: BorderRadius.circular(16),
-                                  ),
-                                  padding: const EdgeInsets.all(16),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Row(
-                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          Text(
-                                            '№ ${row[0]} - ${row[1]}',
-                                            style: const TextStyle(
-                                                fontSize: 18, fontWeight: FontWeight.bold),
-                                          ),
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(
-                                                horizontal: 12, vertical: 6),
-                                            decoration: BoxDecoration(
-                                              color: _etatColor(row[8].toString()),
-                                              borderRadius: BorderRadius.circular(12),
-                                            ),
-                                            child: Text(
-                                              row[8].toString(),
-                                              style: const TextStyle(
-                                                  color: Colors.white,
-                                                  fontWeight: FontWeight.bold),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 12),
-                                      _infoRow('RIB', row[2].toString()),
-                                      _infoRow('Source', row[3].toString()),
-                                      _infoRow('Date Échéance', row[4].toString()),
-                                      _infoRow('Date Réception', row[5].toString()),
-                                      _infoRow('Montant', row[6].toString()),
-                                      _infoRow('Destination', row[7].toString()),
-                                      _infoRow('Retour', mapRetour(row[9])),
-                                      if (row.length > 10 &&
-                                          row[10] != null &&
-                                          row[10] != '')
-                                        _infoRow('Commentaire', row[10].toString()),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                              ),
-    
+: ListView.builder(
+  padding: const EdgeInsets.all(12),
+  itemCount: _filteredTraites.length,
+  itemBuilder: (context, index) {
+    final row = _filteredTraites[index];
+    return Center(
+      child: Container(
+        width: MediaQuery.of(context).size.width * 0.66,
+        child: MouseRegion(
+          cursor: SystemMouseCursors.click,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            transform: Matrix4.identity()..scale(1.01),
+            child: Card(
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16)),
+              elevation: 6,
+              margin: const EdgeInsets.symmetric(vertical: 8),
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      Colors.teal.shade50,
+                      const Color.fromARGB(255, 225, 232, 238)
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          '№ ${row[0]} - ${row[1]}',
+                          style: const TextStyle(
+                              fontSize: 18, fontWeight: FontWeight.bold),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: _etatColor(row[8].toString()),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            row[8].toString(),
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    _infoRow('RIB', row[2].toString()),
+                    _infoRow('Source', row[3].toString()),
+                    _infoRow('Date Échéance', row[4].toString()),
+                    _infoRow('Date Réception', row[5].toString()),
+                    _infoRow('Montant', row[6].toString()),
+                    _infoRow('Destination', row[7].toString()),
+                    _infoRow('Retour', mapRetour(row[9])),
+                    if (row.length > 10 && row[10] != null && row[10] != '')
+                      _infoRow('Commentaire', row[10].toString()),
+
+                    // Delete button
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: IconButton(
+                        icon: const Icon(Icons.delete, color: Colors.red),
+                        onPressed: () async {
+                          bool confirm = await showDialog(
+                            context: context,
+                            builder: (context) => AlertDialog(
+                              title: const Text('Confirmer la suppression'),
+                              content: const Text(
+                                  'Voulez-vous vraiment supprimer ce traite ?'),
+                              actions: [
+                                TextButton(
+                                    onPressed: () =>
+                                        Navigator.pop(context, false),
+                                    child: const Text('Annuler')),
+                                TextButton(
+                                    onPressed: () =>
+                                        Navigator.pop(context, true),
+                                    child: const Text('Supprimer',
+                                        style: TextStyle(color: Colors.red))),
+                              ],
                             ),
                           );
+                          if (confirm) {
+                            // Find the actual index in _traites (not _filteredTraites)
+                            int actualIndex =
+                                _traites.indexOf(_filteredTraites[index]);
+                            await _deleteTraite(actualIndex);
+                          }
                         },
                       ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  },
+),
           ),
         ],
           ),

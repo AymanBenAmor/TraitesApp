@@ -297,28 +297,49 @@ class ClientCard extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-            IconButton(
-              icon: const Icon(Icons.edit, color: Colors.blue),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => ModifyClientPage(
-                      client: client,
-                      onModified: onDeleted, // reuse refresh callback
+              IconButton(
+                icon: const Icon(Icons.edit, color: Colors.blue),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => ModifyClientPage(
+                        client: client,
+                        onModified: onDeleted, // reuse refresh callback
+                      ),
                     ),
-                  ),
-                );
-              },
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(),
-            ),
+                  );
+                },
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+              ),
               const SizedBox(height: 8),
               IconButton(
                 icon: const Icon(Icons.delete, color: Colors.red),
                 onPressed: () async {
-                  await deleteClientFromCSV(client.rib);
-                  onDeleted(); // <-- notify parent to reload
+                  // Show confirmation dialog
+                  bool confirm = await showDialog(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: const Text('Confirmer la suppression'),
+                      content: Text('Voulez-vous vraiment supprimer ${client.name} ?'),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context, false),
+                          child: const Text('Annuler'),
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.pop(context, true),
+                          child: const Text('Supprimer', style: TextStyle(color: Colors.red)),
+                        ),
+                      ],
+                    ),
+                  );
+
+                  if (confirm) {
+                    await deleteClientFromCSV(client.rib);
+                    onDeleted(); // <-- notify parent to reload
+                  }
                 },
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
