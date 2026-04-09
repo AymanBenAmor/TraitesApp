@@ -192,6 +192,28 @@ Future<void> sauvegarder() async {
         return value;
       }
 
+      // --- Check if traite number already exists ---
+if (await csvFile.exists()) {
+  final existingCsv = await csvFile.readAsString();
+  final existingTable = CsvToListConverter().convert(existingCsv, eol: '\n');
+  
+  // Skip headers and check numero
+  final numeroIndex = existingTable[0].indexOf('numero');
+  if (numeroIndex == -1) {
+    debugPrint("Traites CSV headers invalid: ${existingTable[0]}");
+  } else {
+    for (var i = 1; i < existingTable.length; i++) {
+      if (existingTable[i][numeroIndex].toString().trim() == numeroController.text.trim()) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Ce numéro de traite existe déjà !")),
+        );
+        setState(() => isSaving = false);
+        return;
+      }
+    }
+  }
+}
+
       // Append new traite row
       final row = traite.values.map((e) => escapeCsv(e.toString())).join(',');
       await csvFile.writeAsString(row + '\n', mode: FileMode.append, flush: true);
