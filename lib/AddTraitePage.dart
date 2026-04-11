@@ -12,6 +12,7 @@ class NouvelleTraitePage extends StatefulWidget {
 
 class _NouvelleTraitePageState extends State<NouvelleTraitePage> {
   final _formKey = GlobalKey<FormState>();
+  Key _autocompleteKey = UniqueKey();
 
   TextEditingController? _autocompleteController;
 
@@ -198,7 +199,7 @@ if (await csvFile.exists()) {
   final existingTable = CsvToListConverter().convert(existingCsv, eol: '\n');
   
   // Skip headers and check numero
-  final numeroIndex = existingTable[0].indexOf('numero');
+  final numeroIndex = existingTable[0].indexOf('Numero');
   if (numeroIndex == -1) {
     debugPrint("Traites CSV headers invalid: ${existingTable[0]}");
   } else {
@@ -280,16 +281,16 @@ if (await csvFile.exists()) {
         const SnackBar(content: Text("Traite sauvegardée !")),
       );
 
-      // Clear form
-      numeroController.clear();
-      clientController.clear();
-      _autocompleteController?.clear();
-      ribController.clear();
-      sourceController.clear();
-      montantController.clear();
-      destinationController.clear();
-      commentaireController.clear();
+
       setState(() {
+        numeroController.clear();
+        _autocompleteKey = UniqueKey(); // 🔥 FORCE FULL RESET
+        ribController.clear();
+        sourceController.clear();
+        montantController.clear();
+        destinationController.clear();
+        commentaireController.clear();
+
         dateEcheance = null;
         etat = "";
         retour = false;
@@ -341,9 +342,8 @@ appBar: AppBar(
       tooltip: "Tout effacer",
       onPressed: () {
         // Clear the form
+        _autocompleteKey = UniqueKey(); // 🔥 FORCE FULL RESET
         numeroController.clear();
-        clientController.clear();
-        _autocompleteController?.clear(); // <-- clear Autocomplete field
         ribController.clear();
         sourceController.clear();
         montantController.clear();
@@ -378,6 +378,7 @@ appBar: AppBar(
                   ),
                   const SizedBox(height: 12),
 Autocomplete<String>(
+  key: _autocompleteKey, // ✅ VERY IMPORTANT
   optionsBuilder: (textEditingValue) {
     if (textEditingValue.text.isEmpty) {
       return clientNames;

@@ -12,6 +12,8 @@ class TraitesPage extends StatefulWidget {
 
 class _TraitesPageState extends State<TraitesPage> {
   List<List<dynamic>> _traites = [];
+
+
   List<List<dynamic>> _filteredTraites = [];
 
 
@@ -166,8 +168,11 @@ Widget _buildFilterText(
   String label,
   TextEditingController controller,
   Function(String) onChange, {
+  bool readOnly = false,
   bool numeric = false,
   double height = 40,
+  Color fillColor = const Color.fromARGB(255, 255, 255, 255),
+  Color clearIconColor = Colors.white, // ✅ NEW PARAM
 }) {
   return Padding(
     padding: const EdgeInsets.symmetric(vertical: 4),
@@ -177,18 +182,23 @@ Widget _buildFilterText(
           child: SizedBox(
             height: height,
             child: TextField(
+              readOnly: readOnly,
               controller: controller,
-              keyboardType: numeric ? TextInputType.number : TextInputType.text,
+              keyboardType:
+                  numeric ? TextInputType.number : TextInputType.text,
               decoration: InputDecoration(
                 labelText: label,
-                labelStyle: const TextStyle(color: Color.fromARGB(255, 0, 45, 81)),
+                labelStyle: const TextStyle(
+                    color: Color.fromARGB(255, 0, 45, 81)),
                 filled: true,
-                fillColor: Colors.grey.shade100,
+                fillColor: fillColor, // use parameter
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Color.fromARGB(255, 0, 45, 81), width: 0),
+                  borderSide: const BorderSide(
+                      color: Color.fromARGB(255, 0, 45, 81), width: 0),
                 ),
-                contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                contentPadding: const EdgeInsets.symmetric(
+                    vertical: 8, horizontal: 12),
               ),
               style: const TextStyle(fontSize: 14),
               onChanged: (v) {
@@ -199,8 +209,9 @@ Widget _buildFilterText(
           ),
         ),
         IconButton(
-          icon: const Icon(Icons.clear, size: 20, color: Colors.white),
+          icon: Icon(Icons.clear, size: 20, color: clearIconColor), // ✅ USED HERE
           onPressed: () {
+            if (readOnly) return; // don't clear if read-only
             controller.clear();
             onChange('');
             _applyFilters();
@@ -215,8 +226,10 @@ Widget _buildFilterDropdown(
   String label,
   String? value,
   List<String> items,
+
   Function(String?) onChange, {
   double height = 40, // default height
+    Color clearIconColor = Colors.white, // ✅ NEW PARAM
 }) {
   return Padding(
     padding: const EdgeInsets.symmetric(vertical: 4),
@@ -268,7 +281,7 @@ Widget _buildFilterDropdown(
           ),
         ),
         IconButton(
-          icon: const Icon(Icons.clear, size: 20, color: Color.fromARGB(255, 248, 248, 248)),
+          icon: Icon(Icons.clear, size: 20, color: clearIconColor),
           onPressed: () {
             onChange(null);
             _applyFilters();
@@ -289,7 +302,7 @@ Widget _buildFilterDate(String label, DateTime? date, Function(DateTime?) onChan
           child: OutlinedButton(
             style: OutlinedButton.styleFrom(
               padding: const EdgeInsets.symmetric(vertical: 8),
-              backgroundColor: Colors.grey.shade100, // Button background
+              backgroundColor: const Color.fromARGB(255, 255, 255, 255), // Button background
               foregroundColor: const Color.fromARGB(255, 0, 45, 81), // Text and icon color
               side: const BorderSide(color: Color.fromARGB(255, 0, 45, 81), width: 0), // Border color
             ),
@@ -373,6 +386,253 @@ Future<void> _deleteTraite(int index) async {
   }
 }
 
+Future<void> _modifyTraite(int index) async {
+  final row = _traites[index];
+
+  // Create temporary controllers
+  final numeroController = TextEditingController(text: row[0].toString());
+  final clientController = TextEditingController(text: row[1].toString());
+  final ribController = TextEditingController(text: row[2].toString());
+  final sourceController = TextEditingController(text: row[3].toString());
+  final dateEcheanceController = TextEditingController(text: row[4].toString());
+  final dateReceptionController = TextEditingController(text: row[5].toString());
+  final montantController = TextEditingController(text: row[6].toString());
+  final destinationController = TextEditingController(text: row[7].toString());
+  String etat = row[8].toString();
+  String retour = mapRetour(row[9]);
+  final commentController = TextEditingController(
+      text: row.length > 10 && row[10] != null ? row[10].toString() : '');
+
+bool updated = await showDialog(
+  context: context,
+builder: (context) => StatefulBuilder(
+  builder: (context, setState) => Dialog(
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(20),
+    ),
+    child: ConstrainedBox(
+      constraints: const BoxConstraints(
+        maxWidth: 500,
+        maxHeight: 800,
+      ),
+      child: Column(
+        children: [
+          // 🔷 Header
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: const BoxDecoration(
+              color: Color.fromARGB(184, 1, 64, 96),
+              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+            ),
+            child: const Text(
+              'Modifier Traite',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+
+          // 🔷 Content
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  _buildFilterText('Numero', numeroController, (_) {},clearIconColor: const Color.fromARGB(255, 73, 0, 0),readOnly: true),
+                  const SizedBox(height: 5),
+                  _buildFilterText('Client', clientController, (_) {},clearIconColor: const Color.fromARGB(255, 73, 0, 0),readOnly: true),
+                  const SizedBox(height: 5),
+                  _buildFilterText('RIB', ribController, (_) {},clearIconColor: const Color.fromARGB(255, 73, 0, 0),readOnly: true),
+                  const SizedBox(height: 5),
+                  _buildFilterText('Source', sourceController, (_) {},clearIconColor: const Color.fromARGB(255, 73, 0, 0)),
+                  const SizedBox(height: 5),
+                  _buildFilterText('Date Échéance', dateEcheanceController, (_) {},clearIconColor: const Color.fromARGB(255, 73, 0, 0)),
+                  const SizedBox(height: 5),
+                  _buildFilterText('Date Réception', dateReceptionController, (_) {},clearIconColor: const Color.fromARGB(255, 73, 0, 0)),
+                  const SizedBox(height: 5),
+                  _buildFilterText('Montant', montantController, (_) {}, numeric: true, clearIconColor: const Color.fromARGB(255, 73, 0, 0)),
+                  const SizedBox(height: 5),
+                  _buildFilterText('Destination', destinationController, (_) {},clearIconColor: const Color.fromARGB(255, 73, 0, 0)),
+                  const SizedBox(height: 5),
+                  _buildFilterText('Commentaire', commentController, (_) {},clearIconColor: const Color.fromARGB(255, 73, 0, 0)),
+                  const SizedBox(height: 5),
+                  _buildFilterDropdown('Etat', etat, _etatOptions, (v) => setState(() {etat = v ?? etat;}), clearIconColor: const Color.fromARGB(255, 73, 0, 0)),
+                  const SizedBox(height: 10),
+                  _buildFilterDropdown('Retour', retour, _retourOptions, (v) => setState(() {retour = v ?? retour;}), clearIconColor: const Color.fromARGB(255, 73, 0, 0)),
+                ],
+              ),
+            ),
+          ),
+
+          // 🔷 Actions
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            decoration: const BoxDecoration(
+              color: Color.fromARGB(255, 195, 195, 195),
+              borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: const Text(
+                    'Annuler',
+                    style: TextStyle(fontSize: 16, color: Colors.black),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Color.fromARGB(184, 1, 64, 96),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 20, vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  onPressed: () => Navigator.pop(context, true),
+                  child: const Text(
+                    'Enregistrer',
+                    style: TextStyle(fontSize: 16, color: Colors.white),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    ),
+  ),
+),
+) ?? false;
+
+final oldMontant = double.tryParse(row[6].toString()) ?? 0;
+final oldstate = row[8].toString();
+
+  if (updated) {
+    try {
+      // Update the row
+      row[0] = numeroController.text;
+      row[1] = clientController.text;
+      row[2] = ribController.text;
+      row[3] = sourceController.text;
+      row[4] = dateEcheanceController.text;
+      row[5] = dateReceptionController.text;
+      row[6] = montantController.text;
+      row[7] = destinationController.text;
+      row[8] = etat;
+      row[9] = retour == 'Oui' ? true : false;
+      if (row.length > 10) {
+        row[10] = commentController.text;
+      } else {
+        row.add(commentController.text);
+      }
+
+
+
+double newMontant = double.tryParse(montantController.text) ?? 0;
+
+double diff = newMontant - oldMontant;
+
+double oldClientMontant = 0;
+
+
+if (oldstate.toLowerCase() != 'payé' && etat.toLowerCase() == 'payé') {
+  diff = - newMontant; // if changing to "Payé", we need to subtract the old amount from the client
+}else if (oldstate.toLowerCase() == 'payé' && etat.toLowerCase() != 'payé') {
+  diff = newMontant; // if changing from "Payé" to something else, we need to add the new amount to the client
+}
+
+
+
+final directory = await getApplicationDocumentsDirectory();
+final clientPath =
+    '${directory.path}/TraiteManager/Clients/clients.csv';
+
+final clientFile = File(clientPath);
+
+List<List<dynamic>> clients = [];
+
+if (await clientFile.exists()) {
+  final content = await clientFile.readAsString();
+
+  clients = const CsvToListConverter(eol: '\n').convert(content);
+
+  for (int i = 1; i < clients.length; i++) {
+    String name = clients[i][0].toString();
+
+    if (name == clientController.text) {
+      oldClientMontant =
+          double.tryParse(clients[i][3].toString()) ?? 0;
+      break;
+    }
+  }
+} else {
+  debugPrint("client.csv not found → using 0");
+}
+
+// 🔥 compute new value
+double newClientMontant = oldClientMontant + diff;
+
+// ✅ SAVE BACK TO CSV
+if (clients.isNotEmpty) {
+  for (int i = 1; i < clients.length; i++) {
+    String name = clients[i][0].toString();
+
+    if (name == clientController.text) {
+      clients[i][3] = newClientMontant.toStringAsFixed(2);
+      break;
+    }
+  }
+
+List<List<dynamic>> csvContent = [
+  ['Name', 'Phone', 'RIB', 'Montant'], // ✅ CLEAN HEADER
+  ...clients.skip(1)
+];
+
+String csv = const ListToCsvConverter(
+  fieldDelimiter: ',',
+  eol: '\n',
+).convert(csvContent);
+
+await clientFile.writeAsString(csv, flush: true);
+}
+
+      // Save CSV
+      final path = '${directory.path}/TraiteManager/Traites/traites.csv';
+      final file = File(path);
+
+      List<List<dynamic>> csvContent = [
+        ['Numero', 'Client', 'RIB', 'Source', 'Date Echéance', 'Date Réception', 'Montant', 'Destination', 'Etat', 'Retour', 'Commentaire'], // header
+        ..._traites
+      ];
+
+      
+
+      String csv = const ListToCsvConverter().convert(csvContent);
+      if (!csv.endsWith('\n')) {
+        csv += '\n';
+      }
+      await file.writeAsString(csv);
+
+      _applyFilters();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Traite modifié avec succès')),
+      );
+    } catch (e) {
+      debugPrint("Error modifying traite: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Erreur lors de la modification')),
+      );
+    }
+  }
+}
+
 
 @override
 Widget build(BuildContext context) {
@@ -443,61 +703,20 @@ Widget build(BuildContext context) {
                         child: Column(
                           children: [
                             _buildFilterText('Numero Traite', _numeroController, (v) => _filterNumero = v, height: 50),
-
                             _buildFilterText('Client', _clientController, (v) => _filterClient = v, height: 50),
-                            _buildFilterDropdown(
-                              'Etat',
-                              _filterEtat,
-                              _etatOptions,
-                              (v) => _filterEtat = v,
-                            ),
-                            _buildFilterDropdown(
-                              'Retour',
-                              _filterRetour,
-                              _retourOptions,
-                              (v) => _filterRetour = v,
-                            ),
-                            _buildFilterText(
-                              'Commentaire',
-                              _commentController,
-                              (v) => _filterComment = v,
-                              height: 50,
-                            ),
-                            _buildFilterDate(
-                              'Date Échéance',
-                              _filterDateEcheance,
-                              (v) => _filterDateEcheance = v,
-                            ),
-                            _buildFilterDate(
-                              'Date Réception',
-                              _filterDateReception,
-                              (v) => _filterDateReception = v,
-                            ),
-                            _buildFilterText(
-                              'RIB',
-                              _ribController,
-                              (v) => _filterRib = v,
-                              height: 50,
-                            ),
-                            _buildFilterText(
-                              'Source',
-                              _sourceController,
-                              (v) => _filterSource = v,
-                              height: 50,
-                            ),
-                            _buildFilterText(
-                              'Montant',
-                              _montantController,
-                              (v) => _filterMontant = v,
-                              numeric: true,
-                              height: 50,
-                            ),
-                            _buildFilterText(
-                              'Destination',
-                              _destinationController,
-                              (v) => _filterDestination = v,
-                              height: 50,
-                            ),
+                            _buildFilterText('RIB',_ribController,(v) => _filterRib = v,height: 50),
+                            _buildFilterText('Source',_sourceController,(v) => _filterSource = v,height: 50),
+                            _buildFilterDate('Date Échéance',_filterDateEcheance,(v) => _filterDateEcheance = v),
+                            _buildFilterDate('Date Réception',_filterDateReception,(v) => _filterDateReception = v),
+                            _buildFilterText('Montant',_montantController,(v) => _filterMontant = v, height: 50, numeric: true),
+                            _buildFilterText('Destination',_destinationController,(v) => _filterDestination = v,height: 50),
+                            _buildFilterDropdown('Retour',_filterRetour,_retourOptions,(v) => _filterRetour = v),
+                            _buildFilterText('Commentaire', _commentController, (v) => _filterComment = v, height: 50),
+                            _buildFilterDropdown('Etat', _filterEtat, _etatOptions, (v) => _filterEtat = v),
+                            
+                          
+
+
                             const SizedBox(height: 12),
                             ElevatedButton(
                               onPressed: () {
@@ -543,16 +762,14 @@ Widget build(BuildContext context) {
                 ),
               ),
           // Right main panel
-          Expanded(
-            child: _traites.isEmpty
-                ? const Center(child: CircularProgressIndicator())
-                : _filteredTraites.isEmpty
-                    ? const Center(
-                        child: Text(
-                          'Aucun traite trouvé avec ces filtres',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                        ),
-                      )
+Expanded(
+  child: (_traites.isEmpty || _filteredTraites.isEmpty)
+      ? const Center(
+          child: Text(
+            'Aucun traite trouvé',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
+        )
 : ListView.builder(
   padding: const EdgeInsets.all(12),
   itemCount: _filteredTraites.length,
@@ -622,40 +839,44 @@ Widget build(BuildContext context) {
                     if (row.length > 10 && row[10] != null && row[10] != '')
                       _infoRow('Commentaire', row[10].toString()),
 
+                    
                     // Delete button
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: IconButton(
-                        icon: const Icon(Icons.delete, color: Colors.red),
-                        onPressed: () async {
-                          bool confirm = await showDialog(
-                            context: context,
-                            builder: (context) => AlertDialog(
-                              title: const Text('Confirmer la suppression'),
-                              content: const Text(
-                                  'Voulez-vous vraiment supprimer ce traite ?'),
-                              actions: [
-                                TextButton(
-                                    onPressed: () =>
-                                        Navigator.pop(context, false),
-                                    child: const Text('Annuler')),
-                                TextButton(
-                                    onPressed: () =>
-                                        Navigator.pop(context, true),
-                                    child: const Text('Supprimer',
-                                        style: TextStyle(color: Colors.red))),
-                              ],
-                            ),
-                          );
-                          if (confirm) {
-                            // Find the actual index in _traites (not _filteredTraites)
-                            int actualIndex =
-                                _traites.indexOf(_filteredTraites[index]);
-                            await _deleteTraite(actualIndex);
-                          }
-                        },
-                      ),
-                    ),
+                    Row(
+  mainAxisAlignment: MainAxisAlignment.end,
+  children: [
+    IconButton(
+      icon: const Icon(Icons.edit, color: Colors.blue),
+      onPressed: () async {
+        int actualIndex = _traites.indexOf(_filteredTraites[index]);
+        await _modifyTraite(actualIndex);
+      },
+    ),
+    IconButton(
+      icon: const Icon(Icons.delete, color: Colors.red),
+      onPressed: () async {
+        bool confirm = await showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Confirmer la suppression'),
+            content: const Text('Voulez-vous vraiment supprimer ce traite ?'),
+            actions: [
+              TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: const Text('Annuler')),
+              TextButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  child: const Text('Supprimer', style: TextStyle(color: Colors.red))),
+            ],
+          ),
+        );
+        if (confirm) {
+          int actualIndex = _traites.indexOf(_filteredTraites[index]);
+          await _deleteTraite(actualIndex);
+        }
+      },
+    ),
+  ],
+),
                   ],
                 ),
               ),
