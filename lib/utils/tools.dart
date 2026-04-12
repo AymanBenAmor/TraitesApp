@@ -552,3 +552,20 @@ Future<List<Client>> checkClientsMontant() async {
 
   return clientsExceeding;
 }
+
+
+class Traite {
+  final String numero;
+  final String client;
+  final String etat;
+  final DateTime dateEcheance;
+  final double montant;
+
+  Traite({
+    required this.numero,
+    required this.client,
+    required this.etat,
+    required this.dateEcheance,
+    required this.montant,
+  });
+}

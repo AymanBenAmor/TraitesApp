@@ -1,4 +1,8 @@
+import 'dart:io';
+
+import 'package:csv/csv.dart';
 import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:traitenova/AddTraitePage.dart';
 import 'package:traitenova/Clients.dart';
 import 'package:traitenova/DisplayTraitesPage.dart';
@@ -19,6 +23,7 @@ class _HomePageState extends State<HomePage> with RouteAware {
   ClockHelper? _clockHelper;
   int _notifsNumber = 0; // example notification count
   List<Client> clientsExceedingMontant = [];
+  List<Traite> traitesEnRetard = [];
 
   @override
   void initState() {
@@ -34,11 +39,18 @@ class _HomePageState extends State<HomePage> with RouteAware {
     
   }
 
-    Future<void> _loadClients() async {
+  Future<void> _loadClients() async {
     final clients = await checkClientsMontant();
+    final traites = await checkTraitementsEnRetard();
+
+  
+
+
     setState(() {
       clientsExceedingMontant = clients;
-      _notifsNumber = clients.length; // update notification count
+      traitesEnRetard = traites;
+
+      _notifsNumber = clients.length + traites.length;
     });
   }
 
@@ -60,6 +72,62 @@ class _HomePageState extends State<HomePage> with RouteAware {
   void didPopNext() {
     _loadClients(); // refresh client notifications
   }
+
+  DateTime parseDate(String input) {
+  final parts = input.split('/');
+
+  final day = int.parse(parts[0]);
+  final month = int.parse(parts[1]);
+  final year = int.parse(parts[2]);
+
+  return DateTime(year, month, day);
+}
+
+Future<List<Traite>> loadTraitements() async {
+  final Directory docDir = await getApplicationDocumentsDirectory();
+  final File file =
+      File('${docDir.path}/TraiteManager/Traites/traites.csv');
+
+  if (!await file.exists()) return [];
+
+  final csvString = await file.readAsString();
+  final csvTable =
+      const CsvToListConverter().convert(csvString, eol: '\n');
+
+  final List<Traite> traites = [];
+
+  for (int i = 1; i < csvTable.length; i++) {
+    final row = csvTable[i];
+
+    traites.add(
+      Traite(
+        numero: row[0].toString(),
+        client: row[1].toString(),
+        etat: row[8].toString(),
+        dateEcheance: parseDate(row[4].toString()),
+        montant: double.tryParse(row[6].toString()) ?? 0,
+      ),
+    );
+  }
+
+  
+
+  return traites;
+}
+
+
+Future<List<Traite>> checkTraitementsEnRetard() async {
+  final all = await loadTraitements();
+  
+  final now = DateTime.now();
+  
+  return all.where((t) {
+    final isEnCours = t.etat.trim().toLowerCase() == "en cours";
+    final isOverdue = t.dateEcheance.isBefore(now);
+    
+    return isEnCours && isOverdue;
+  }).toList();
+}
 
 
   @override
@@ -98,12 +166,14 @@ class _HomePageState extends State<HomePage> with RouteAware {
                   color: Colors.white,
                 ),
       onPressed: () {
+        
         // Navigate to NotificationsPage
         Navigator.push(
           context,
           MaterialPageRoute(
             builder: (context) => NotificationsPage(
               clientsExceeding: clientsExceedingMontant,
+              traitesEnRetard: traitesEnRetard,
             ),
           ),
         );
