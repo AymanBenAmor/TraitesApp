@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import 'package:traite_manager/ModifyClientPage.dart';
 
-int montantLimit = 15000; // montant limite pour les notifications
+
 int RIBLength = 4; // longueur du RIB
 
 /// 🚨 Show license error dialog
@@ -482,25 +482,57 @@ Future<List<Client>> loadClientsFromCSV() async {
   }
 }
 
+int montantLimit = 20000; // default value
+
+Future<int> loadMontantLimit() async {
+  try {
+    final Directory docDir = await getApplicationDocumentsDirectory();
+    final File file = File(
+      '${docDir.path}/TraiteManager/Settings/montant_limit.txt',
+    );
+
+    // 📁 Ensure directory exists
+    await file.parent.create(recursive: true);
+
+    // 📄 If file doesn't exist → create it with default value
+    if (!await file.exists()) {
+      await file.writeAsString(montantLimit.toString());
+      return montantLimit;
+    }
+
+    // 📖 Read existing value
+    String content = await file.readAsString();
+    return int.tryParse(content.trim()) ?? montantLimit;
+
+  } catch (e) {
+    print("Error loading montant limit: $e");
+    return montantLimit;
+  }
+}
+
 
 Future<List<Client>> checkClientsMontant() async {
   final List<Client> clientsExceeding = [];
 
   try {
+    final int montantLimit = await loadMontantLimit();
+
     final Directory docDir = await getApplicationDocumentsDirectory();
-    final File file = File('${docDir.path}/TraiteManager/Clients/clients.csv');
+    final File file = File(
+      '${docDir.path}/TraiteManager/Clients/clients.csv',
+    );
 
     if (!await file.exists()) return clientsExceeding;
 
     final List<String> lines = await file.readAsLines();
-    if (lines.length <= 1) return clientsExceeding; // only header
+    if (lines.length <= 1) return clientsExceeding;
 
     for (var line in lines.sublist(1)) {
       final parts = line.split(',');
       if (parts.length < 4) continue;
 
       final String name = parts[0].trim();
-      final int phone = int.tryParse(parts[1].trim()) ?? 0; // parse as integer
+      final int phone = int.tryParse(parts[1].trim()) ?? 0;
       final String rib = parts[2].trim();
       final double montant = double.tryParse(parts[3].trim()) ?? 0;
 
