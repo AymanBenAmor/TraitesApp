@@ -1,6 +1,6 @@
 {
-    "name": "traite_manager",
-    "short_name": "traite_manager",
+    "name": "traitenova",
+    "short_name": "traitenova",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

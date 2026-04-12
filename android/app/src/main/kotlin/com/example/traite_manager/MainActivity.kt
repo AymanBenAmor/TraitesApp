@@ -1,4 +1,4 @@
-package com.example.traite_manager
+package com.example.traitenova
 
 import io.flutter.embedding.android.FlutterActivity
 

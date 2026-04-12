@@ -1,7 +1,7 @@
 
 import 'package:flutter/material.dart';
-import 'package:traite_manager/AddClient.dart';
-import 'package:traite_manager/utils/tools.dart';
+import 'package:traitenova/AddClient.dart';
+import 'package:traitenova/utils/tools.dart';
 
 class EspaceClientPage extends StatefulWidget {
   const EspaceClientPage({super.key});

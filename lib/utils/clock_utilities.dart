@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'package:flutter/material.dart';
 
 /// Clock helper class to manage current time updates
 class ClockHelper {

@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
-import 'package:traite_manager/ModifyClientPage.dart';
+import 'package:traitenova/ModifyClientPage.dart';
 
 
-int RIBLength = 4; // longueur du RIB
+int RIBLength = 20; // longueur du RIB
 
 /// 🚨 Show license error dialog
 void showBlocked(BuildContext context, String message) {
@@ -374,7 +374,7 @@ Future<void> deleteClientFromCSV(String rib) async {
     final content = [header, ...remaining].join('\n');
     await file.writeAsString(content, flush: true);
   } catch (e) {
-    print("Error deleting client from CSV: $e");
+    debugPrint("Error deleting client from CSV: $e");
   }
 }
 
@@ -473,11 +473,12 @@ Future<List<Client>> loadClientsFromCSV() async {
         rib: parts[2],
         montantEncours: double.tryParse(parts[3]) ?? 0,
       );
+      
     }).toList();
 
     return clients;
   } catch (e) {
-    print("Error reading CSV: $e");
+    debugPrint("Error reading CSV: $e");
     return [];
   }
 }
@@ -505,7 +506,7 @@ Future<int> loadMontantLimit() async {
     return int.tryParse(content.trim()) ?? montantLimit;
 
   } catch (e) {
-    print("Error loading montant limit: $e");
+    debugPrint("Error loading montant limit: $e");
     return montantLimit;
   }
 }
@@ -546,7 +547,7 @@ Future<List<Client>> checkClientsMontant() async {
       }
     }
   } catch (e) {
-    print("Error checking clients: $e");
+    debugPrint("Error checking clients: $e");
   }
 
   return clientsExceeding;

@@ -50,10 +50,13 @@ class _NouvelleTraitePageState extends State<NouvelleTraitePage> {
     if (await file.exists()) {
       
       final csvString = await file.readAsString();
-      final csvTable = CsvToListConverter().convert(csvString, eol: '\n');
+      final csvTable = CsvToListConverter(shouldParseNumbers: false,).convert(csvString, eol: '\n');
+
+      
 
       final headers = csvTable[0].map((e) => e.toString()).toList();
       final data = csvTable.skip(1);
+      
 
       setState(() {
         clients = data.map((row) {
@@ -197,7 +200,7 @@ Future<void> sauvegarder() async {
       // --- Check if traite number already exists ---
 if (await csvFile.exists()) {
   final existingCsv = await csvFile.readAsString();
-  final existingTable = CsvToListConverter().convert(existingCsv, eol: '\n');
+  final existingTable = CsvToListConverter(shouldParseNumbers: false).convert(existingCsv, eol: '\n');
   
   // Skip headers and check numero
   final numeroIndex = existingTable[0].indexOf('Numero');
@@ -224,7 +227,7 @@ if (await csvFile.exists()) {
       final File clientsFile = File('${docDir.path}/TraiteManager/Clients/clients.csv');
       if (await clientsFile.exists()) {
         final csvString = await clientsFile.readAsString();
-        final csvTable = CsvToListConverter().convert(csvString, eol: '\n');
+        final csvTable = CsvToListConverter(shouldParseNumbers: false).convert(csvString, eol: '\n');
 
         // Trim headers
         final headers = csvTable[0].map((e) => e.toString().trim()).toList();
@@ -404,6 +407,7 @@ Autocomplete<String>(
     clientController.text = selection;
     final selectedClient = clients.firstWhere((c) => c['Name'] == selection);
     ribController.text = selectedClient['RIB'] ?? '';
+    
   },
 ),
 
@@ -411,6 +415,7 @@ Autocomplete<String>(
                   
                   TextFormField(
                     controller: ribController,
+                    keyboardType: TextInputType.text,
                     decoration: const InputDecoration(
                       labelText: "RIB du client",
                       prefixIcon: Icon(Icons.account_balance, color: Colors.indigo),

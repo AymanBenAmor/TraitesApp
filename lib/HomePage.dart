@@ -1,15 +1,12 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:traite_manager/AddTraitePage.dart';
-import 'package:traite_manager/Clients.dart';
-import 'package:traite_manager/DisplayTraitesPage.dart';
-import 'package:traite_manager/NotificationPage.dart';
-import 'package:traite_manager/main.dart';
-import 'package:traite_manager/utils/SecurityTools.dart';
-import 'package:traite_manager/utils/tools.dart';
-import 'package:traite_manager/utils/clock_utilities.dart';
+import 'package:traitenova/AddTraitePage.dart';
+import 'package:traitenova/Clients.dart';
+import 'package:traitenova/DisplayTraitesPage.dart';
+import 'package:traitenova/NotificationPage.dart';
+import 'package:traitenova/main.dart';
+import 'package:traitenova/utils/SecurityTools.dart';
+import 'package:traitenova/utils/tools.dart';
+import 'package:traitenova/utils/clock_utilities.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -89,7 +86,7 @@ class _HomePageState extends State<HomePage> with RouteAware {
               color: Color.fromARGB(255, 237, 237, 237),
             ),
             onPressed: () {
-              print("Sync clicked");
+              // print("Sync clicked");
               // TODO: add sync logic (API / database refresh)
             },
           ),
@@ -204,7 +201,7 @@ class _HomePageState extends State<HomePage> with RouteAware {
                   }, color: const Color.fromARGB(184, 1, 64, 96)), // bleu-gris clair
 
                   buildCard(Icons.list, "Voir les Traites", () {
-                    print("Voir les Traites tapped");
+                    // print("Voir les Traites tapped");
                     Navigator.push(context, MaterialPageRoute(builder: (context) => TraitesPage()));
                   }, color: const Color.fromARGB(184, 1, 64, 96)), // bleu-gris moyen
 

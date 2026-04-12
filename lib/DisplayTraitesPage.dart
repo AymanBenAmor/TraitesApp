@@ -62,7 +62,7 @@ class _TraitesPageState extends State<TraitesPage> {
       final fixedContent = csvContent.replaceAll('\r\n', '\n');
 
       List<List<dynamic>> rowsAsListOfValues =
-          const CsvToListConverter(eol: '\n').convert(fixedContent);
+          const CsvToListConverter(shouldParseNumbers: false, eol: '\n').convert(fixedContent);
 
       setState(() {
         _traites = rowsAsListOfValues.sublist(1); // skip header
@@ -546,7 +546,12 @@ if (oldstate.toLowerCase() != 'payé' && etat.toLowerCase() == 'payé') {
   diff = - newMontant; // if changing to "Payé", we need to subtract the old amount from the client
 }else if (oldstate.toLowerCase() == 'payé' && etat.toLowerCase() != 'payé') {
   diff = newMontant; // if changing from "Payé" to something else, we need to add the new amount to the client
+}else if (oldstate.toLowerCase() == 'payé' && etat.toLowerCase() == 'payé') {
+  diff = 0; // if still "Payé", we just take the difference
+  
 }
+
+
 
 
 
@@ -561,7 +566,7 @@ List<List<dynamic>> clients = [];
 if (await clientFile.exists()) {
   final content = await clientFile.readAsString();
 
-  clients = const CsvToListConverter(eol: '\n').convert(content);
+  clients = const CsvToListConverter(shouldParseNumbers: false,eol: '\n').convert(content);
 
   for (int i = 1; i < clients.length; i++) {
     String name = clients[i][0].toString();

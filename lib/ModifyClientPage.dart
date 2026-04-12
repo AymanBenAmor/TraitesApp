@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:traite_manager/utils/tools.dart';
+import 'package:traitenova/utils/tools.dart';
 
 class ModifyClientPage extends StatefulWidget {
   final Client client;

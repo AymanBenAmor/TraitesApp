@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:traite_manager/utils/tools.dart';
+import 'package:traitenova/utils/tools.dart';
 
 class AddClientPage extends StatefulWidget {
   const AddClientPage({super.key});
