@@ -4,6 +4,7 @@ import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
 import 'tools.dart'; // for showBlocked
 
+
 /// ------------------------
 /// ✅ LICENSE CHECK FUNCTION
 /// ------------------------
@@ -54,11 +55,12 @@ Future<void> checkLicense({
 
     // 4️⃣ Compare
     if (macHash != serialHash) {
-      throw Exception(
-          "You do not have a valid license to use this application.\n"
-          "Please contact administrator to obtain a valid license.\n\n"
-          "Admin E-mail: aymen.benamor@ensi-uma.tn\n"
-          "Admin Phone: +216 54 393 769");
+    throw Exception(
+      "Vous ne disposez pas d'une licence valide pour utiliser cette application.\n"
+      "Veuillez contacter l'administrateur pour obtenir une licence valide.\n\n"
+      "E-mail de l'administrateur : aymen.benamor@ensi-uma.tn\n"
+      "Téléphone de l'administrateur : +216 54 393 769"
+    );
     }
 
   } catch (e) {

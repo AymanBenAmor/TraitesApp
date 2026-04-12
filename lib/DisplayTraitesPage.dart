@@ -312,6 +312,7 @@ Widget _buildFilterDate(String label, DateTime? date, Function(DateTime?) onChan
                 initialDate: date ?? DateTime.now(),
                 firstDate: DateTime(2000),
                 lastDate: DateTime(2100),
+                locale: const Locale('fr', 'FR'), // 👈 IMPORTANT
                 builder: (context, child) {
                   return Theme(
                     data: Theme.of(context).copyWith(

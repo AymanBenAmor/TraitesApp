@@ -77,6 +77,7 @@ class _NouvelleTraitePageState extends State<NouvelleTraitePage> {
       initialDate: DateTime.now(),
       firstDate: DateTime(2020),
       lastDate: DateTime(2100),
+      locale: const Locale('fr', 'FR'), // 👈 IMPORTANT
     );
 
     if (picked != null) {
